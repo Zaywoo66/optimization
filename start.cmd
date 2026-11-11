@@ -7,13 +7,6 @@ if exist "%~dp0bin\memory-pilot.exe" (
 ) else if exist "%~dp0target\release\memory-pilot.exe" (
     "%~dp0target\release\memory-pilot.exe" %MODE%
 ) else (
-    if "%MODE%"=="compare" (
-        echo Compare requires the Rust executable. 1>&2
-        exit /b 1
-    )
-    if "%MODE%"=="snapshot" (
-        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0MemoryPilot.ps1" -SelfTest
-    ) else (
-        powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File "%~dp0MemoryPilot.ps1"
-    )
+    echo Rust executable not found. Build with cargo build --release. 1>&2
+    exit /b 1
 )
