@@ -29,6 +29,15 @@ test("selects only old ordinary web tabs when enabled", () => {
   assert.equal(policy.isEligible(oldTab({ url: "https://sub.chatgpt.com/c/123" }), settings, now), false);
 });
 
+test("AI tabs require a separate manual sweep and two hours of inactivity", () => {
+  const ai = oldTab({ url: "https://chatgpt.com/c/123", lastAccessed: now - 130 * 60_000 });
+  assert.equal(policy.isEligible(ai, settings, now), false);
+  assert.equal(policy.isEligible(ai, settings, now, "ai-only"), true);
+  assert.equal(policy.isEligible(oldTab(), settings, now, "ai-only"), false);
+  assert.equal(policy.isEligible(ai, settings, now - 20 * 60_000, "ai-only"), false);
+  assert.equal(policy.isEligible(ai, { ...settings, enabled: false }, now, "ai-only"), false);
+});
+
 test("disabled extension does not query or discard tabs", async () => {
   const tabs = { query: () => { throw new Error("should not be called"); } };
   const result = await sweepTabs(tabs, { ...settings, enabled: false }, policy, now);
@@ -48,4 +57,18 @@ test("rechecks tab state before discarding", async () => {
   const result = await sweepTabs(tabs, settings, policy, now);
   assert.deepEqual(discarded, [1]);
   assert.deepEqual(result, { scanned: 2, candidates: 2, discarded: 1 });
+});
+
+test("manual AI sweep leaves ordinary tabs untouched", async () => {
+  const discarded = [];
+  const tabs = {
+    query: async () => [
+      oldTab({ id: 1, url: "https://chatgpt.com/c/123", lastAccessed: now - 130 * 60_000 }),
+      oldTab({ id: 2 })
+    ],
+    discard: async (id) => { discarded.push(id); return { discarded: true }; }
+  };
+  const result = await sweepTabs(tabs, settings, policy, now, "ai-only");
+  assert.deepEqual(discarded, [1]);
+  assert.equal(result.discarded, 1);
 });

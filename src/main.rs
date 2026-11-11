@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::env;
+use std::io;
 use std::path::PathBuf;
 use std::process::{self, Command};
 use std::thread;
@@ -95,6 +96,47 @@ fn print_snapshot(snapshot: &Snapshot) {
     println!("* Summed working sets can count shared pages more than once.");
 }
 
+fn tracked_bytes(snapshot: &Snapshot) -> [u64; 4] {
+    [
+        named_bytes(&snapshot.groups, &["brave.exe", "brave"]),
+        named_bytes(&snapshot.groups, &["chrome.exe", "chrome"]),
+        named_bytes(&snapshot.groups, &["opera.exe", "opera"]),
+        named_bytes(
+            &snapshot.groups,
+            &["ChatGPT.exe", "ChatGPT", "codex.exe", "codex"],
+        ),
+    ]
+}
+
+fn print_delta(label: &str, before: u64, after: u64) {
+    let delta = (after as i128 - before as i128) / MIB as i128;
+    println!(
+        "{label:<16} {:>8} {:>8} {delta:>+8} MiB",
+        before / MIB,
+        after / MIB
+    );
+}
+
+fn compare_snapshots(before: &Snapshot, after: &Snapshot) {
+    println!(
+        "{:<16} {:>8} {:>8} {:>12}",
+        "Metric", "Before", "After", "Change"
+    );
+    print_delta("Available", before.available, after.available);
+    for (index, label) in ["Brave", "Chrome", "Opera", "ChatGPT/Codex"]
+        .iter()
+        .enumerate()
+    {
+        print_delta(
+            label,
+            tracked_bytes(before)[index],
+            tracked_bytes(after)[index],
+        );
+    }
+    print_delta("Monitor", before.own_bytes, after.own_bytes);
+    println!("Working sets may include shared pages; background activity changes these figures.");
+}
+
 fn open_brave_settings() -> Result<(), String> {
     let mut candidates = Vec::<PathBuf>::new();
     for key in ["ProgramFiles", "ProgramFiles(x86)"] {
@@ -130,6 +172,19 @@ fn main() {
                 thread::sleep(Duration::from_secs(5));
             }
         }
+        "compare" => {
+            let mut system = System::new().expect("Cannot initialize system monitor");
+            println!("Taking baseline snapshot...");
+            let before = take_snapshot(&mut system);
+            println!("Apply one change, then press Enter to measure again.");
+            let mut input = String::new();
+            if let Err(error) = io::stdin().read_line(&mut input) {
+                eprintln!("Could not read input: {error}");
+                process::exit(1);
+            }
+            let after = take_snapshot(&mut system);
+            compare_snapshots(&before, &after);
+        }
         "brave-settings" => {
             if let Err(error) = open_brave_settings() {
                 eprintln!("{error}");
@@ -137,7 +192,7 @@ fn main() {
             }
         }
         _ => {
-            eprintln!("Usage: memory-pilot [snapshot|watch|brave-settings]");
+            eprintln!("Usage: memory-pilot [snapshot|watch|compare|brave-settings]");
             process::exit(2);
         }
     }
@@ -163,5 +218,37 @@ mod tests {
         ];
         assert_eq!(named_bytes(&groups, &["brave.exe"]), 100);
         assert_eq!(named_bytes(&groups, &["codex.exe"]), 0);
+    }
+
+    #[test]
+    fn tracks_browsers_and_agents_separately() {
+        let snapshot = Snapshot {
+            total: 0,
+            available: 0,
+            groups: vec![
+                ProcessGroup {
+                    name: "brave.exe".into(),
+                    count: 1,
+                    bytes: 10,
+                },
+                ProcessGroup {
+                    name: "chrome.exe".into(),
+                    count: 1,
+                    bytes: 20,
+                },
+                ProcessGroup {
+                    name: "opera.exe".into(),
+                    count: 1,
+                    bytes: 30,
+                },
+                ProcessGroup {
+                    name: "codex.exe".into(),
+                    count: 1,
+                    bytes: 40,
+                },
+            ],
+            own_bytes: 0,
+        };
+        assert_eq!(tracked_bytes(&snapshot), [10, 20, 30, 40]);
     }
 }

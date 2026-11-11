@@ -13,7 +13,8 @@ async function load() {
   minutes.value = String(current.idleMinutes);
   domains.value = current.protectedDomains.join(", ");
   if (stored.lastResult?.time) {
-    showStatus(`Последняя проверка: выгружено ${stored.lastResult.discarded} из ${stored.lastResult.scanned} вкладок.`);
+    const kind = stored.lastResult.mode === "ai-only" ? " ИИ" : "";
+    showStatus(`Последняя проверка: выгружено ${stored.lastResult.discarded} из ${stored.lastResult.scanned} вкладок${kind}.`);
   } else {
     showStatus("Автоматическая выгрузка выключена до вашего включения.");
   }
@@ -40,6 +41,12 @@ document.getElementById("run").addEventListener("click", async () => {
   if (!enabled.checked) { showStatus("Сначала включите выгрузку вкладок."); return; }
   const result = await chrome.runtime.sendMessage({ type: "sweep-now" });
   showStatus(result?.error || `Выгружено ${result.discarded} из ${result.scanned} вкладок.`);
+});
+
+document.getElementById("run-ai").addEventListener("click", async () => {
+  if (!(await save())) return;
+  const result = await chrome.runtime.sendMessage({ type: "sweep-ai" });
+  showStatus(result?.error || `Выгружено ${result.discarded} из ${result.scanned} вкладок ИИ.`);
 });
 
 void load();

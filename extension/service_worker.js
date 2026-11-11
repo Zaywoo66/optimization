@@ -15,10 +15,11 @@ async function syncAlarm() {
   }
 }
 
-async function runSweep() {
+async function runSweep(mode = "ordinary") {
   const current = await settings();
-  const result = await globalThis.MemoryPilotSweep.sweepTabs(chrome.tabs, current, policy);
-  await chrome.storage.local.set({ lastResult: { ...result, time: Date.now() } });
+  const sweepSettings = mode === "ai-only" ? { ...current, enabled: true } : current;
+  const result = await globalThis.MemoryPilotSweep.sweepTabs(chrome.tabs, sweepSettings, policy, Date.now(), mode);
+  await chrome.storage.local.set({ lastResult: { ...result, mode, time: Date.now() } });
   return result;
 }
 
@@ -31,7 +32,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_NAME) void runSweep();
 });
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== "sweep-now") return false;
-  runSweep().then(sendResponse, (error) => sendResponse({ error: error.message }));
+  if (message?.type !== "sweep-now" && message?.type !== "sweep-ai") return false;
+  runSweep(message.type === "sweep-ai" ? "ai-only" : "ordinary")
+    .then(sendResponse, (error) => sendResponse({ error: error.message }));
   return true;
 });

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Memory Pilot: Idle Tabs",
-  "version": "0.3.0",
-  "description": "Optionally unloads old Brave tabs while protecting active and important tabs.",
+  "version": "0.4.0",
+  "description": "Optionally unloads old browser tabs and manually selected idle AI tabs.",
   "permissions": ["tabs", "storage", "alarms"],
   "background": {
     "service_worker": "service_worker.js"
