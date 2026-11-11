@@ -7,6 +7,9 @@ use std::thread;
 use std::time::Duration;
 use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
 
+#[cfg(windows)]
+mod report;
+
 const MIB: u64 = 1024 * 1024;
 
 #[derive(Clone, Debug)]
@@ -48,7 +51,7 @@ fn take_snapshot(system: &mut System) -> Snapshot {
     }
 
     let mut groups: Vec<_> = groups.into_values().collect();
-    groups.sort_by(|a, b| b.bytes.cmp(&a.bytes));
+    groups.sort_by_key(|group| std::cmp::Reverse(group.bytes));
     Snapshot {
         total: system.total_memory(),
         available: system.available_memory(),
@@ -185,6 +188,21 @@ fn main() {
             let after = take_snapshot(&mut system);
             compare_snapshots(&before, &after);
         }
+        "report" => {
+            #[cfg(windows)]
+            {
+                let seconds = args.get(2).map_or(Ok(15), |value| value.parse::<u64>());
+                let result = seconds
+                    .map_err(|_| "report duration must be a number of seconds".to_string())
+                    .and_then(report::run);
+                if let Err(error) = result {
+                    eprintln!("{error}");
+                    process::exit(2);
+                }
+            }
+            #[cfg(not(windows))]
+            eprintln!("report is supported on Windows only");
+        }
         "brave-settings" => {
             if let Err(error) = open_brave_settings() {
                 eprintln!("{error}");
@@ -192,7 +210,9 @@ fn main() {
             }
         }
         _ => {
-            eprintln!("Usage: memory-pilot [snapshot|watch|compare|brave-settings]");
+            eprintln!(
+                "Usage: memory-pilot [snapshot|watch|compare|report [seconds]|brave-settings]"
+            );
             process::exit(2);
         }
     }

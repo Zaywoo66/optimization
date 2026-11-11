@@ -1,0 +1,21 @@
+name: Rust Windows
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt --check
+      - run: cargo clippy -- -D warnings
+      - run: cargo test
+      - name: Reject forbidden process and service APIs
+        shell: pwsh
+        run: |
+          $blocked = 'EmptyWorkingSet|SetProcessWorkingSetSize|ChangeServiceConfig|ControlService|RegSetValue|NtSetInformationProcess'
+          $hits = Get-ChildItem src -Recurse -Filter *.rs | Select-String -Pattern $blocked
+          if ($hits) { $hits | Write-Output; exit 1 }
