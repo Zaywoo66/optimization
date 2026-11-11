@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Memory Pilot</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>Memory Pilot</h1>
+  <label class="toggle"><input id="enabled" type="checkbox"> Выгружать неактивные вкладки</label>
+  <label for="minutes">После бездействия</label>
+  <select id="minutes">
+    <option value="15">15 минут</option>
+    <option value="30">30 минут</option>
+    <option value="60">1 час</option>
+    <option value="120">2 часа</option>
+  </select>
+  <label for="domains">Никогда не выгружать сайты</label>
+  <textarea id="domains" rows="4" spellcheck="false" placeholder="chatgpt.com, docs.google.com"></textarea>
+  <p class="hint">Указывайте домены через запятую. Вкладка перезагрузится при возвращении; несохранённые данные на других сайтах могут потеряться.</p>
+  <div class="buttons">
+    <button id="save">Сохранить</button>
+    <button id="run">Проверить сейчас</button>
+  </div>
+  <p id="status" role="status"></p>
+  <script src="policy.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

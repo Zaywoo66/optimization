@@ -1,0 +1,10 @@
+body { width: 320px; margin: 0; padding: 16px; font: 14px/1.4 system-ui, sans-serif; color: #17212b; }
+h1 { margin: 0 0 14px; font-size: 19px; }
+label { display: block; margin: 12px 0 5px; font-weight: 600; }
+.toggle { margin-top: 0; }
+select, textarea { width: 100%; box-sizing: border-box; padding: 7px; font: inherit; }
+textarea { resize: vertical; }
+.hint { color: #4b5563; font-size: 12px; }
+.buttons { display: flex; gap: 8px; }
+button { flex: 1; padding: 8px 6px; cursor: pointer; }
+#status { min-height: 20px; margin-bottom: 0; }
